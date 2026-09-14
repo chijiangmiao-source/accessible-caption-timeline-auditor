@@ -20,6 +20,9 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
 const isIntMs = (value: unknown): value is number =>
   typeof value === 'number' && Number.isInteger(value);
 
+/** 每项仅允许这四个字段，出现额外字段（如 speaker）即整批拒绝 */
+const ALLOWED_FIELDS: ReadonlySet<string> = new Set(['id', 'start', 'end', 'text']);
+
 function missing(itemIndex: number, field: FieldName): ValidationResult {
   return {
     ok: false,
@@ -43,7 +46,7 @@ function illegal(itemIndex: number, field: FieldName, detail: string): Validatio
 
 /**
  * 校验输入数组。按输入项顺序、每项内按 id → start → end → text 的字段顺序
- * 定位首个错误；任一字段缺失、类型错误、id 重复或时间非法即整批拒绝。
+ * 定位首个错误；任一字段缺失、类型错误、id 重复、时间非法或含额外字段即整批拒绝。
  */
 export function validateSegments(input: unknown): ValidationResult {
   if (!Array.isArray(input)) {
@@ -96,6 +99,20 @@ export function validateSegments(input: unknown): ValidationResult {
     if (!('text' in item)) return missing(i, 'text');
     if (typeof item.text !== 'string') return typeError(i, 'text', '应为字符串');
     if (item.text.length === 0) return illegal(i, 'text', '不能为空字符串');
+
+    // 额外字段：四个命名字段校验通过后，不允许出现任何其他字段
+    for (const key of Object.keys(item)) {
+      if (!ALLOWED_FIELDS.has(key)) {
+        return {
+          ok: false,
+          issue: {
+            itemIndex: i,
+            field: null,
+            message: `第 ${i + 1} 项包含额外字段 "${key}"（仅允许 id、start、end、text）`,
+          },
+        };
+      }
+    }
 
     seenIds.set(item.id, i);
     segments.push({ id: item.id, start: item.start, end: item.end, text: item.text, index: i });

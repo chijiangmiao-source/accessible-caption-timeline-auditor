@@ -70,6 +70,22 @@ test('非法输入整批拒绝并清除旧图形与结论', async ({ page }) => 
   await expect(page.getByTestId('conclusion')).toHaveCount(0);
 });
 
+test('携带额外字段（如 speaker）整批拒绝并清空结果', async ({ page }) => {
+  await page.getByTestId('json-input').fill(OK_JSON);
+  await expect(page.getByTestId('conclusion')).toHaveText('可交付');
+  await expect(page.locator('[data-testid="segment-rect"]')).toHaveCount(3);
+
+  const withSpeaker = JSON.stringify([
+    { id: 's1', start: 0, end: 1000, text: '第一句', speaker: '甲' },
+    { id: 's2', start: 1100, end: 2000, text: '第二句' },
+  ]);
+  await page.getByTestId('json-input').fill(withSpeaker);
+  await expect(page.getByTestId('error-panel')).toBeVisible();
+  await expect(page.getByTestId('error-panel')).toContainText('speaker');
+  await expect(page.locator('[data-testid="segment-rect"]')).toHaveCount(0);
+  await expect(page.getByTestId('conclusion')).toHaveCount(0);
+});
+
 test('字段缺失与时间非法均整批拒绝', async ({ page }) => {
   await page
     .getByTestId('json-input')

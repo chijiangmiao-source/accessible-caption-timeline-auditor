@@ -24,6 +24,14 @@ describe('evaluateJson', () => {
     if (r.status === 'invalid') expect(r.message).toContain('id');
   });
 
+  it('含额外字段（如 speaker）整批拒绝', () => {
+    const r = evaluateJson(
+      JSON.stringify([{ id: 'a', start: 0, end: 100, text: 'x', speaker: '甲' }]),
+    );
+    expect(r.status).toBe('invalid');
+    if (r.status === 'invalid') expect(r.message).toContain('speaker');
+  });
+
   it('合法且无问题：可交付', () => {
     const r = evaluateJson(
       JSON.stringify([

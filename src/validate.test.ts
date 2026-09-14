@@ -128,6 +128,32 @@ describe('validateSegments', () => {
     if (!r.ok) expect(r.issue.field).toBe('id');
   });
 
+  it('额外字段（如 speaker）整批拒绝并定位到对应项', () => {
+    const r = validateSegments([
+      ok('a'),
+      { ...ok('b', 200, 300), speaker: '甲' },
+    ]);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.issue.itemIndex).toBe(1);
+      expect(r.issue.message).toContain('speaker');
+    }
+  });
+
+  it('多个额外字段时按键顺序报告第一个', () => {
+    const r = validateSegments([{ ...ok('a'), zeta: 1, speaker: 'x' }]);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.issue.message).toContain('zeta');
+  });
+
+  it('同一项内四个命名字段的错误优先于额外字段', () => {
+    const r = validateSegments([
+      { id: 'a', start: -1, end: 100, text: 'x', speaker: 'y' },
+    ]);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.issue.field).toBe('start');
+  });
+
   it('边界：start 为 0 合法，end 恰好比 start 大 1 合法', () => {
     const r = validateSegments([ok('a', 0, 1)]);
     expect(r.ok).toBe(true);
