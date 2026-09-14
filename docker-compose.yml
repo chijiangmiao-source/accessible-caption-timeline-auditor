@@ -1,0 +1,16 @@
+services:
+  web:
+    build:
+      context: .
+      target: web
+    ports:
+      - "${WEB_PORT:-8080}:80"
+
+  verify:
+    build:
+      context: .
+      target: verify
+    depends_on:
+      - web
+    environment:
+      BASE_URL: http://web:80
