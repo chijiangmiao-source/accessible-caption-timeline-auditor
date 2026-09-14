@@ -135,6 +135,52 @@ textarea {
   font-family: ui-monospace, Menlo, monospace;
 }
 
+/* 结论区 id 为可点击按钮：点击即选中并定位对应片段 */
+button.id-chip {
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+button.id-chip:hover {
+  background: rgba(0, 0, 0, 0.14);
+}
+
+button.id-chip:focus-visible {
+  outline: 2px solid #2b56d9;
+  outline-offset: 1px;
+}
+
+.details {
+  margin-top: 12px;
+  background: #fff;
+  border: 1px solid #e5e6eb;
+  border-left: 3px solid #4e7cff;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  gap: 14px 28px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+
+.details .k {
+  color: #646a73;
+  margin-right: 6px;
+  font-size: 13px;
+}
+
+.detail-id {
+  font-family: ui-monospace, Menlo, monospace;
+  font-weight: 600;
+}
+
+.detail-text-row {
+  flex-basis: 100%;
+  word-break: break-all;
+}
+
 .hint {
   color: #86909c;
   margin-top: 16px;
@@ -189,11 +235,24 @@ textarea {
   stroke: #c9cdd4;
 }
 
+.seg {
+  cursor: pointer;
+}
+
 .seg rect {
   fill: #4e7cff;
   fill-opacity: 0.85;
   stroke: #2b56d9;
   stroke-width: 1;
+}
+
+.seg:focus {
+  outline: none;
+}
+
+.seg:focus-visible rect {
+  stroke: #1d2129;
+  stroke-width: 3;
 }
 
 .seg-label {
@@ -212,10 +271,24 @@ textarea {
   stroke: #d25f00;
 }
 
+/* 选中态：深色描边，叠在高亮色之上 */
+.seg.sel rect {
+  stroke: #1d2129;
+  stroke-width: 2.5;
+}
+
 .timeline.emph .seg:not(.hl) {
   opacity: 0.18;
 }
 
 .timeline.emph .seg.hl rect {
   stroke-width: 3;
+}
+
+.nav-hint {
+  min-height: 20px;
+  margin-top: 4px;
+  padding: 0 2px;
+  color: #b25b00;
+  font-size: 12.5px;
 }

@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { evaluateJson } from './evaluate';
-import { Timeline, type TimelineHighlight } from './Timeline';
+import { resolveSelected } from './locate';
+import { Timeline, type TimelineHandle, type TimelineHighlight } from './Timeline';
 
 const SAMPLE_OK = JSON.stringify(
   [
@@ -35,15 +36,36 @@ const SAMPLE_DENSE = JSON.stringify(
 export default function App() {
   const [raw, setRaw] = useState('');
   const [emphasized, setEmphasized] = useState(false);
+  /** 选择状态以片段 id 为唯一契约 */
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const timelineRef = useRef<TimelineHandle | null>(null);
   const evaluation = useMemo(() => evaluateJson(raw), [raw]);
 
-  const highlight: TimelineHighlight | null =
+  // 输入变化后若该 id 仍存在则保留选择；目标消失、整批非法或清空输入时撤销
+  useEffect(() => {
+    if (selectedId === null) return;
+    const alive =
+      evaluation.status === 'valid' && evaluation.sorted.some((s) => s.id === selectedId);
+    if (!alive) setSelectedId(null);
+  }, [evaluation, selectedId]);
+
+  const selected =
+    evaluation.status === 'valid' ? resolveSelected(evaluation.sorted, selectedId) : null;
+
+  const problem =
     evaluation.status === 'valid' && evaluation.result.kind !== 'ok'
-      ? {
-          kind: evaluation.result.kind,
-          ids: [evaluation.result.first.id, evaluation.result.second.id],
-        }
+      ? evaluation.result
       : null;
+
+  const highlight: TimelineHighlight | null = problem
+    ? { kind: problem.kind, ids: [problem.first.id, problem.second.id] }
+    : null;
+
+  /** 结论区 id 跳转：选中对应片段并把键盘焦点交给时间轴，便于继续方向键核对 */
+  const jumpToSegment = (id: string) => {
+    setSelectedId(id);
+    timelineRef.current?.focusSegment(id);
+  };
 
   return (
     <div className="app">
@@ -91,7 +113,7 @@ export default function App() {
 
       {evaluation.status === 'valid' && (
         <>
-          {evaluation.result.kind === 'ok' ? (
+          {problem === null ? (
             <div
               className="conclusion ok"
               data-testid="conclusion"
@@ -102,7 +124,7 @@ export default function App() {
             </div>
           ) : (
             <div
-              className={`conclusion problem ${evaluation.result.kind}`}
+              className={`conclusion problem ${problem.kind}`}
               data-testid="conclusion"
               data-status="problem"
               aria-live="polite"
@@ -112,28 +134,76 @@ export default function App() {
               <div>
                 <span className="k">问题类型</span>
                 <span data-testid="problem-type">
-                  {evaluation.result.kind === 'overlap' ? '重叠' : '过密切换'}
+                  {problem.kind === 'overlap' ? '重叠' : '过密切换'}
                 </span>
               </div>
               <div>
                 <span className="k">发生毫秒</span>
-                <span data-testid="problem-at">{evaluation.result.at}</span>
+                <span data-testid="problem-at">{problem.at}</span>
               </div>
               <div>
                 <span className="k">双方 id</span>
-                <span className="id-chip" data-testid="problem-id-a">
-                  {evaluation.result.first.id}
-                </span>
-                <span className="id-chip" data-testid="problem-id-b">
-                  {evaluation.result.second.id}
-                </span>
+                <button
+                  type="button"
+                  className="id-chip"
+                  data-testid="problem-id-a"
+                  title="选中并定位该片段"
+                  onClick={() => jumpToSegment(problem.first.id)}
+                >
+                  {problem.first.id}
+                </button>
+                <button
+                  type="button"
+                  className="id-chip"
+                  data-testid="problem-id-b"
+                  title="选中并定位该片段"
+                  onClick={() => jumpToSegment(problem.second.id)}
+                >
+                  {problem.second.id}
+                </button>
               </div>
             </div>
           )}
+
+          {selected && (
+            <section
+              className="details"
+              data-testid="segment-details"
+              aria-live="polite"
+              aria-label="选中片段详情"
+            >
+              <div>
+                <span className="k">id</span>
+                <span className="detail-id" data-testid="detail-id">
+                  {selected.id}
+                </span>
+              </div>
+              <div>
+                <span className="k">开始毫秒</span>
+                <span data-testid="detail-start">{selected.start}</span>
+              </div>
+              <div>
+                <span className="k">结束毫秒</span>
+                <span data-testid="detail-end">{selected.end}</span>
+              </div>
+              <div>
+                <span className="k">时长毫秒</span>
+                <span data-testid="detail-duration">{selected.end - selected.start}</span>
+              </div>
+              <div className="detail-text-row">
+                <span className="k">正文</span>
+                <span data-testid="detail-text">{selected.text}</span>
+              </div>
+            </section>
+          )}
+
           <Timeline
+            ref={timelineRef}
             segments={evaluation.sorted}
             highlight={highlight}
             emphasized={emphasized}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
           />
         </>
       )}
